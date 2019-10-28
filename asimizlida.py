@@ -136,7 +136,6 @@ import json
 import discord
 import decks
 import random
-import randomorg
 import pyimgur
 from PIL import Image
 import os
@@ -198,12 +197,6 @@ def containsflag(message, flag):
   return False
 
 def selectresponse(message):
-  if containsflag(message, "trng"):
-    try:
-      random.seed(randomorg.rrandom())
-    except Exception as err:
-      return err
-
   if containsflag(message, "words"):
     nwords = random.randint(1, 5)
     sentence = " ".join([random.choice(wordlist) for n in range(nwords)]).capitalize() + "."
