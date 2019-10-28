@@ -234,11 +234,11 @@ discordclient = discord.Client()
 @discordclient.event
 async def on_message(message):
   if containsflag(message.content, "asimi")  or containsflag(message.content, "asimizlida")\
-      or discordclient.user.mentioned_in(message=message) or isinstance(message.channel, discord.PrivateChannel)\
+      or discordclient.user.mentioned_in(message=message) or isinstance(message.channel, discord.DMChannel)\
       and not message.author.bot:
     try:
       response = message.author.mention + ": " + selectresponse(message.content)
-      await discordclient.send_message(message.channel, response)
+      await message.channel.send(response)
     except discord.errors.Forbidden:
       pass
 
