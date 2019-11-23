@@ -132,6 +132,8 @@
 #MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
 #MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
 
+import asyncio
+import aiohttp
 import json
 import discord
 import decks
@@ -227,22 +229,46 @@ def selectresponse(message):
 
   return " ".join(["{0} <{1}>".format(card[0], card[1]) for card in cards])
 
+class Timer:
+  def __init__(self, timeout, callback):
+    self._timeout = timeout
+    self._callback = callback
+    self._task = asyncio.ensure_future(self._job())
+
+  async def _job(self):
+    await asyncio.sleep(self._timeout)
+    await self._callback()
+
+  def cancel(self):
+    self._task.cancel()
+
+class DiscordClient(discord.Client):
+  is_downloading_news = False
+
+  async def on_message(self, message):
+    if containsflag(message.content, "asimi")  or containsflag(message.content, "asimizlida")\
+        or discordclient.user.mentioned_in(message=message) or isinstance(message.channel, discord.DMChannel)\
+        and not message.author.bot:
+      try:
+        response = message.author.mention + ": " + selectresponse(message.content)
+        await message.channel.send(response)
+      except discord.errors.Forbidden:
+        pass
+
+  async def on_ready(self):
+    if not self.is_downloading_news:
+      self.is_downloading_news = True
+      while True:
+        async with aiohttp.ClientSession() as session:
+          async with session.get('https://newsapi.org/v2/top-headlines?language=en&apiKey={}'.format(clientdata["newskey"])) as r:
+            loagaeth_caosagi = await r.json()
+            with open("loagaeth_caosagi", 'w') as f:
+              json.dump(loagaeth_caosagi, f, sort_keys=True, indent=2)
+        await asyncio.sleep(5 * 60)
 
 
-discordclient = discord.Client()
 
-@discordclient.event
-async def on_message(message):
-  if containsflag(message.content, "asimi")  or containsflag(message.content, "asimizlida")\
-      or discordclient.user.mentioned_in(message=message) or isinstance(message.channel, discord.DMChannel)\
-      and not message.author.bot:
-    try:
-      response = message.author.mention + ": " + selectresponse(message.content)
-      await message.channel.send(response)
-    except discord.errors.Forbidden:
-      pass
-
-
+discordclient = DiscordClient()
 discordclient.run(clientdata["token"])
 
 
