@@ -199,36 +199,6 @@ def containsflag(message, flag):
     return True
   return False
 
-def selectresponse(message):
-  if containsflag(message, "trng"):
-    try:
-      random.seed(randomorg.rrandom())
-    except Exception as err:
-      return err
-
-  if containsflag(message, "words"):
-    nwords = random.randint(1, 5)
-    sentence = " ".join([random.choice(wordlist) for n in range(nwords)]).capitalize() + "."
-    return sentence
-
-  if containsflag(message, "celtic cross"):
-    link = celticcross()
-    return "Cast cards: <{0}> (Meanings: <https://goo.gl/ZEwmwd>".format(link)
-
-  if containsflag(message, "haindl"):
-    deck = decks.HAINDL
-  elif containsflag(message, "rw"):
-    deck = decks.RW_DECK
-  else:
-    deck = decks.THOTH
-
-  if containsflag(message, "spread"):
-    cards = random.sample(deck, 3)
-  else:
-    cards = [random.choice(deck)]
-
-  return " ".join(["{0} <{1}>".format(card[0], card[1]) for card in cards])
-
 class Timer:
   def __init__(self, timeout, callback):
     self._timeout = timeout
@@ -244,13 +214,57 @@ class Timer:
 
 class DiscordClient(discord.Client):
   is_downloading_news = False
+  loagaeth_caosagi = None
+
+  def selectresponse(self, message):
+    if containsflag(message, "trng"):
+      try:
+        random.seed(randomorg.rrandom())
+      except Exception as err:
+        return err
+
+    if containsflag(message, "words"):
+      nwords = random.randint(1, 5)
+      sentence = " ".join([random.choice(wordlist) for n in range(nwords)]).capitalize() + "."
+      return sentence
+
+    if containsflag(message, "celtic cross"):
+      link = celticcross()
+      return "Cast cards: <{0}> (Meanings: <https://goo.gl/ZEwmwd>".format(link)
+
+    if containsflag(message, "probability"):
+      result = random.randint(0, 100)
+      return "{}%".format(result)
+
+    if containsflag(message, "worldnews") and self.loagaeth_caosagi:
+      try:
+        text = random.choice(self.loagaeth_caosagi['articles'])['description']
+        if not text:
+          raise Exception
+        return text
+      except:
+        return "Sorry, there's something wrong with the news atm. Don't have anything to share."
+
+    if containsflag(message, "haindl"):
+      deck = decks.HAINDL
+    elif containsflag(message, "rw"):
+      deck = decks.RW_DECK
+    else:
+      deck = decks.THOTH
+
+    if containsflag(message, "spread"):
+      cards = random.sample(deck, 3)
+    else:
+      cards = [random.choice(deck)]
+
+    return " ".join(["{0} <{1}>".format(card[0], card[1]) for card in cards])
 
   async def on_message(self, message):
     if containsflag(message.content, "asimi")  or containsflag(message.content, "asimizlida")\
         or discordclient.user.mentioned_in(message=message) or isinstance(message.channel, discord.DMChannel)\
         and not message.author.bot:
       try:
-        response = message.author.mention + ": " + selectresponse(message.content)
+        response = message.author.mention + ": " + self.selectresponse(message.content)
         await message.channel.send(response)
       except discord.errors.Forbidden:
         pass
@@ -261,9 +275,9 @@ class DiscordClient(discord.Client):
       while True:
         async with aiohttp.ClientSession() as session:
           async with session.get('https://newsapi.org/v2/top-headlines?language=en&apiKey={}'.format(clientdata["newskey"])) as r:
-            loagaeth_caosagi = await r.json()
+            self.loagaeth_caosagi = await r.json()
             with open("loagaeth_caosagi", 'w') as f:
-              json.dump(loagaeth_caosagi, f, sort_keys=True, indent=2)
+              json.dump(self.loagaeth_caosagi, f, sort_keys=True, indent=2)
         await asyncio.sleep(5 * 60)
 
 
